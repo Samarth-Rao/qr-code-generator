@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-samarth
+  namespace: qr-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-samarth
+  template:
+    metadata:
+      labels:
+        app: hello-samarth
+    spec:
+      containers:
+      - name: hello-samarth
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: html
+        configMap:
+          name: hello-samarth-html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-samarth-html
+  namespace: qr-generator
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Hello Samarth</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                margin: 0;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                color: white;
+            }
+            .container {
+                text-align: center;
+                background: rgba(255, 255, 255, 0.1);
+                padding: 40px;
+                border-radius: 20px;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            }
+            h1 {
+                font-size: 3em;
+                margin-bottom: 20px;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            }
+            p {
+                font-size: 1.2em;
+                margin-bottom: 30px;
+            }
+            .links {
+                display: flex;
+                gap: 20px;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            a {
+                color: white;
+                text-decoration: none;
+                padding: 10px 20px;
+                border: 2px solid white;
+                border-radius: 25px;
+                transition: all 0.3s ease;
+            }
+            a:hover {
+                background: white;
+                color: #667eea;
+                transform: translateY(-2px);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Hello Samarth! 👋</h1>
+            <p>Welcome to your Kubernetes cluster!</p>
+            <div class="links">
+                <a href="/samarth">QR Generator</a>
+                <a href="/">Home</a>
+            </div>
+        </div>
+    </body>
+    </html>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-samarth-service
+  namespace: qr-generator
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: hello-samarth 

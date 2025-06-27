@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: default-backend
+  namespace: qr-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: default-backend
+  template:
+    metadata:
+      labels:
+        app: default-backend
+    spec:
+      containers:
+      - name: default-backend
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: html
+        configMap:
+          name: default-backend-html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: default-backend-html
+  namespace: qr-generator
+data:
+  index.html: |
+    <html>
+      <head><title>Welcome</title></head>
+      <body>
+        <h1>Welcome to the Default Page!</h1>
+        <p>This is the default backend for /</p>
+      </body>
+    </html>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: default-backend
+  namespace: qr-generator
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: default-backend 

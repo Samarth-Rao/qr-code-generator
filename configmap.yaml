@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qr-generator-config
+  namespace: qr-generator
+  labels:
+    app: qr-generator
+    version: v1.0.0
+data:
+  # Application configuration
+  APP_HOST: "0.0.0.0"
+  APP_PORT: "8000"
+  
+  # QR Code default settings
+  DEFAULT_QR_SIZE: "200"
+  DEFAULT_BOX_SIZE: "10"
+  MAX_QR_SIZE: "500"
+  MIN_QR_SIZE: "100"
+  
+  # Application settings
+  LOG_LEVEL: "INFO"
+  DEBUG: "false"
+  
+  # QR Code generation settings
+  ERROR_CORRECTION_LEVEL: "L"
+  BORDER_SIZE: "4"
+  QR_VERSION: "1" 

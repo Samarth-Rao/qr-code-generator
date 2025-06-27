@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qr-generator
+  namespace: qr-generator
+  labels:
+    app: qr-generator
+    version: v1.0.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: qr-generator
+  template:
+    metadata:
+      labels:
+        app: qr-generator
+        version: v1.0.0
+    spec:
+      serviceAccountName: qr-generator-sa
+      containers:
+      - name: qr-generator
+        image: qr-generator:latest
+        imagePullPolicy: Never  # For local Kind cluster
+        workingDir: /workspace
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: APP_HOST
+          value: "0.0.0.0"
+        - name: APP_PORT
+          value: "8000"
+        - name: DEFAULT_QR_SIZE
+          value: "200"
+        - name: DEFAULT_BOX_SIZE
+          value: "10"
+        - name: MAX_QR_SIZE
+          value: "500"
+        - name: MIN_QR_SIZE
+          value: "100"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+            httpHeaders:
+            - name: Host
+              value: localhost
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+            httpHeaders:
+            - name: Host
+              value: localhost
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+          successThreshold: 1
+        volumeMounts:
+        - name: qr-codes-storage
+          mountPath: /workspace/static
+        - name: app-config
+          mountPath: /workspace/config
+          readOnly: true
+      volumes:
+      - name: qr-codes-storage
+        emptyDir: {}
+      - name: app-config
+        configMap:
+          name: qr-generator-config
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000 
