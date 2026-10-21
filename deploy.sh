@@ -3,6 +3,9 @@
 # QR Code Generator - Kind Deployment Script
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 echo "🚀 Starting QR Code Generator deployment to Kind..."
 
 # Colors for output
@@ -53,18 +56,7 @@ fi
 CLUSTER_NAME="qr-generator-cluster"
 if ! kind get clusters | grep -q "$CLUSTER_NAME"; then
     print_status "Creating Kind cluster: $CLUSTER_NAME"
-    kind create cluster --name "$CLUSTER_NAME" --config - <<EOF
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-nodes:
-- role: control-plane
-  extraPortMappings:
-  - containerPort: 30080
-    hostPort: 30080
-    protocol: TCP
-- role: worker
-- role: worker
-EOF
+    kind create cluster --name "$CLUSTER_NAME" --config "$SCRIPT_DIR/kind-config.yaml"
     print_success "Kind cluster created successfully"
 else
     print_status "Kind cluster '$CLUSTER_NAME' already exists"

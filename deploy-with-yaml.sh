@@ -49,7 +49,7 @@ print_status "Current kubectl context: $CURRENT_CONTEXT"
 # Build Docker image using pack
 print_status "Building Docker image using pack..."
 if command -v pack &> /dev/null; then
-    pack build qr-generator:latest --builder paketobuildpacks/builder:base
+    pack build qr-generator:latest --builder paketobuildpacks/builder-jammy-base
     print_success "Docker image built successfully with pack"
 else
     print_warning "pack not found, building with Docker..."

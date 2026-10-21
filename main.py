@@ -1,11 +1,17 @@
 from fastapi import FastAPI, HTTPException, Form
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 import qrcode
 import io
 import os
 from PIL import Image
 import uuid
+
+# Configuration (set via the Kubernetes ConfigMap; defaults match previous hardcoded values)
+APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
+APP_PORT = int(os.getenv("APP_PORT", "8000"))
+DEFAULT_QR_SIZE = int(os.getenv("DEFAULT_QR_SIZE", "200"))
+DEFAULT_BOX_SIZE = int(os.getenv("DEFAULT_BOX_SIZE", "10"))
 
 app = FastAPI(
     title="QR Code Generator API",
@@ -20,7 +26,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Serve the main HTML page with QR code generator interface"""
-    return """
+    return INDEX_HTML
+
+
+INDEX_HTML = """
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -241,21 +250,25 @@ async def root():
         </script>
     </body>
     </html>
-    """
+    """.replace(
+    'id="size" name="size" value="200"', f'id="size" name="size" value="{DEFAULT_QR_SIZE}"'
+).replace(
+    'id="box_size" name="box_size" value="10"', f'id="box_size" name="box_size" value="{DEFAULT_BOX_SIZE}"'
+)
 
 @app.post("/generate-qr")
 async def generate_qr_code(
     data: str = Form(..., description="Text, URL, or data to encode in QR code"),
-    size: int = Form(200, description="Size of the QR code in pixels"),
-    box_size: int = Form(10, description="Size of each box in the QR code")
+    size: int = Form(DEFAULT_QR_SIZE, description="Size of the QR code in pixels"),
+    box_size: int = Form(DEFAULT_BOX_SIZE, description="Size of each box in the QR code")
 ):
     """
     Generate a QR code from the provided data
     
     Args:
         data: Text, URL, or data to encode in the QR code
-        size: Size of the QR code in pixels (default: 200)
-        box_size: Size of each box in the QR code (default: 10)
+        size: Size of the QR code in pixels (default: DEFAULT_QR_SIZE, 200)
+        box_size: Size of each box in the QR code (default: DEFAULT_BOX_SIZE, 10)
     
     Returns:
         JSON response with the URL to the generated QR code image
@@ -303,6 +316,8 @@ async def generate_qr_code(
             "box_size": box_size
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating QR code: {str(e)}")
 
@@ -325,7 +340,7 @@ async def generate_qr_simple(data: str):
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
+            box_size=DEFAULT_BOX_SIZE,
             border=4,
         )
         qr.add_data(data)
@@ -338,12 +353,14 @@ async def generate_qr_simple(data: str):
         img.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
         
-        return FileResponse(
-            img_byte_arr,
+        return Response(
+            content=img_byte_arr.getvalue(),
             media_type="image/png",
-            filename="qr_code.png"
+            headers={"Content-Disposition": 'inline; filename="qr_code.png"'}
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating QR code: {str(e)}")
 
@@ -354,4 +371,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host=APP_HOST, port=APP_PORT) 

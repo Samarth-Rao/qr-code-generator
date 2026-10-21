@@ -57,7 +57,7 @@ brew install kind kubectl
    ```
 
    This script will:
-   - Create a Kind cluster with 3 nodes (1 control-plane, 2 workers)
+   - Create a Kind cluster from `kind-config.yaml` (1 control-plane labeled `ingress-ready=true`, 2 workers; host ports 80/443 for the ingress controller and 30080 for the NodePort service)
    - Build and load the Docker image
    - Install NGINX Ingress Controller
    - Deploy the application with all Kubernetes resources
@@ -81,7 +81,7 @@ If you prefer to deploy manually:
 
 1. **Create Kind cluster**:
    ```bash
-   kind create cluster --name qr-generator-cluster
+   kind create cluster --name qr-generator-cluster --config kind-config.yaml
    ```
 
 2. **Build and load Docker image**:
@@ -212,14 +212,16 @@ kubectl port-forward svc/qr-generator-service 8080:80 -n qr-generator
 
 ## Configuration
 
-The application uses sensible defaults.
+The application uses sensible defaults, but you can modify the following:
 
 ### Environment Variables
-The Kubernetes ConfigMap sets the following variables, but `main.py` does not currently read them. Host/port (0.0.0.0:8000) and QR defaults (size 200, box size 10) are hardcoded, so changing these has no effect:
-- `APP_HOST`: Application host (0.0.0.0)
-- `APP_PORT`: Application port (8000)
-- `DEFAULT_QR_SIZE`: Default QR code size (200)
-- `DEFAULT_BOX_SIZE`: Default box size (10)
+These are read by `main.py` and set in Kubernetes via `k8s/configmap.yaml`:
+- `APP_HOST`: Application host (default: 0.0.0.0)
+- `APP_PORT`: Application port (default: 8000)
+- `DEFAULT_QR_SIZE`: Default QR code size in the web form and `/generate-qr` (default: 200)
+- `DEFAULT_BOX_SIZE`: Default box size in the web form, `/generate-qr` and `/generate-qr-simple` (default: 10)
+
+`APP_HOST`/`APP_PORT` apply when the app is started with `python main.py` (as the Dockerfile and Procfile do); running `uvicorn main:app` directly uses uvicorn's own `--host`/`--port` flags. If you change `APP_PORT` in Kubernetes, also update `containerPort`, the probe ports in `k8s/deployment.yaml` and `targetPort` in `k8s/service.yaml`.
 
 ### Kubernetes Configuration
 - **Replicas**: 2 (configurable in `k8s/deployment.yaml`)
@@ -235,6 +237,8 @@ QR Code Generator/
 ├── requirements.txt     # Python dependencies
 ├── Dockerfile          # Docker container configuration
 ├── .dockerignore       # Docker build exclusions
+├── Procfile            # Process definition (used by Cloud Native Buildpacks)
+├── kind-config.yaml    # Kind cluster config (ingress-ready node, port mappings)
 ├── deploy.sh           # Kind deployment script
 ├── cleanup.sh          # Kind cleanup script
 ├── README.md           # This file
@@ -255,6 +259,17 @@ QR Code Generator/
 - **qrcode**: QR code generation library
 - **Pillow**: Python Imaging Library for image processing
 - **python-multipart**: For handling form data
+
+## Build with Cloud Native Buildpacks
+
+As an alternative to the Dockerfile, you can build the image with [`pack`](https://buildpacks.io/docs/for-platform-operators/how-to/integrate-ci/pack/) and the Paketo builder, which uses `requirements.txt` and the `Procfile`:
+
+```bash
+pack build qr-generator:latest --builder paketobuildpacks/builder-jammy-base
+kind load docker-image qr-generator:latest --name qr-generator-cluster
+```
+
+`deploy-with-yaml.sh` uses `pack` automatically when it is installed and falls back to `docker build` otherwise.
 
 ## Development
 
@@ -316,5 +331,3 @@ This project is open source and available under the MIT License.
 ## Contributing
 
 Feel free to submit issues and enhancement requests! 
-
-pack build qr-generator:latest --builder paketobuildpacks/builder:base 
