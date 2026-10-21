@@ -212,13 +212,14 @@ kubectl port-forward svc/qr-generator-service 8080:80 -n qr-generator
 
 ## Configuration
 
-The application uses sensible defaults, but you can modify the following:
+The application uses sensible defaults.
 
 ### Environment Variables
-- `APP_HOST`: Application host (default: 0.0.0.0)
-- `APP_PORT`: Application port (default: 8000)
-- `DEFAULT_QR_SIZE`: Default QR code size (default: 200)
-- `DEFAULT_BOX_SIZE`: Default box size (default: 10)
+The Kubernetes ConfigMap sets the following variables, but `main.py` does not currently read them. Host/port (0.0.0.0:8000) and QR defaults (size 200, box size 10) are hardcoded, so changing these has no effect:
+- `APP_HOST`: Application host (0.0.0.0)
+- `APP_PORT`: Application port (8000)
+- `DEFAULT_QR_SIZE`: Default QR code size (200)
+- `DEFAULT_BOX_SIZE`: Default box size (10)
 
 ### Kubernetes Configuration
 - **Replicas**: 2 (configurable in `k8s/deployment.yaml`)
